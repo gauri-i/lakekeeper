@@ -16445,28 +16445,24 @@ components:
           format: int64
           description: |-
             Only remove files older than this duration (in milliseconds).
-            Defaults to 604800000 (7 days). **24-hour safety floor** is
-            enforced at task pickup (`RemoveOrphanFilesRetentionTooShort`
-            error code); values below it cause the worker to refuse to
-            run, unless `disable-min-older-than-check` is set on this same
-            config. Mirrors Spark's `retentionDurationCheck.enabled =
-            false` escape.
-
-            Negative, zero, or sub-day values still deserialize cleanly —
-            the runtime check is what blocks them. Out-of-range i64 values
-            that don't fit in `chrono::TimeDelta` fall back to a zero
-            duration rather than panicking.
+            Defaults to 604800000 (7 days). Must be at least 86400000
+            (24 hours) when the config is saved, unless
+            `disable-min-older-than-check: true` is set in the same request
+            (`RemoveOrphanFilesRetentionTooShort` error code). A stored config
+            with a lower value fails at task pickup with the same code.
           default: 604800000
         disable-min-older-than-check:
           type: boolean
           description: |-
             Bypass the 24-hour minimum on `default-older-than-ms`. When
-            `false` (the default), the worker refuses to run a task whose
-            configured retention is shorter than 24h — a typo like
+            `false` (the default), saving a config with a retention shorter
+            than 24h fails, and the worker refuses to run a task whose stored
+            retention is shorter — a typo like
             `default-older-than-ms: 6000` (6 seconds) would otherwise
             silently delete in-flight writer uploads. Set to `true` only
-            when you genuinely need sub-day retention (dev/test). Mirrors
-            Spark's `retentionDurationCheck.enabled = false` escape.
+            when you genuinely need sub-day retention (dev/test). It does
+            not change table values; a table uses its own
+            `lakekeeper.remove-orphan-files.disable-min-older-than-check`.
           default: false
         dry-run:
           type: boolean
